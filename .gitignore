@@ -1,0 +1,18 @@
+/bin/
+*.class
+
+.DS_Store
+Implementation/pets.csv
+Implementation/player_data.csv
+tracking
+Implementation/playtime_tracking.csv
+Implementation/progress.csv
+Implementation/inventory.csv
+Implementation/store.csv
+Implementation/parentalPassword.txt
+
+# Maven
+target/
+.mvn/
+mvnw
+mvnw.cmd

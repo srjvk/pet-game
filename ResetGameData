@@ -1,0 +1,50 @@
+#!/bin/bash
+
+# Get the directory where the script is located
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+JAR_PATH="$SCRIPT_DIR/GameApp.jar"
+DATA_DIR="$SCRIPT_DIR/game_data"
+
+echo "WARNING: This will reset all game data to defaults."
+echo "All saved progress will be lost."
+read -p "Are you sure you want to reset all game data? (y/n) " -n 1 -r
+echo
+if [[ $REPLY =~ ^[Yy]$ ]]; then
+    echo "Resetting game data..."
+    
+    # Create a temporary directory
+    TEMP_DIR="$SCRIPT_DIR/temp_reset_$(date +%s)"
+    mkdir -p "$TEMP_DIR"
+    cd "$TEMP_DIR"
+    
+    # Extract resource list
+    jar xf "$JAR_PATH" resource_files.txt
+    
+    if [ -f resource_files.txt ]; then
+        cat resource_files.txt | while read file; do
+            if [[ $file == *.csv ]]; then
+                # Extract the CSV file
+                jar xf "$JAR_PATH" "$file"
+                
+                # Create directory in data dir if needed
+                data_file_path="$DATA_DIR/$file"
+                data_dir=$(dirname "$data_file_path")
+                mkdir -p "$data_dir"
+                
+                # Replace the data file
+                cp "$file" "$data_file_path"
+                echo "Reset: $file"
+            fi
+        done
+    else
+        echo "Could not find resource list in JAR."
+        exit 1
+    fi
+    
+    # Clean up
+    cd "$SCRIPT_DIR"
+    rm -rf "$TEMP_DIR"
+    echo "Game data has been reset to default values."
+else
+    echo "Reset canceled."
+fi

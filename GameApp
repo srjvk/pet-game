@@ -1,0 +1,97 @@
+#!/bin/bash
+
+# Get the directory where the script is located
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+JAR_PATH="$SCRIPT_DIR/GameApp.jar"
+
+# Create persistent data directory next to the JAR file
+DATA_DIR="$SCRIPT_DIR/game_data"
+mkdir -p "$DATA_DIR"
+
+# Create a unique temporary directory for non-data resources
+TEMP_DIR="$SCRIPT_DIR/temp_resources_$(date +%s)"
+mkdir -p "$TEMP_DIR"
+
+echo "Setting up application environment..."
+
+# Extract the resource list
+cd "$TEMP_DIR" 
+jar xf "$JAR_PATH" resource_files.txt
+jar xf "$JAR_PATH" game.properties
+
+if [ -f resource_files.txt ]; then
+    echo "Resource list found. Creating directories and extracting files..."
+    
+    # First ensure all data directories exist and initialize CSV files if needed
+    cat resource_files.txt | while read file; do
+        if [[ $file == *.csv ]]; then
+            # For CSV files, set up the data structure
+            data_file_path="$DATA_DIR/$file"
+            data_dir=$(dirname "$data_file_path")
+            
+            # Create directory structure in DATA_DIR
+            mkdir -p "$data_dir"
+            
+            # Copy the CSV file to the data directory if it doesn't exist
+            if [ ! -f "$data_file_path" ]; then
+                # Extract the original CSV from the JAR
+                jar xf "$JAR_PATH" "$file"
+                # Initialize the data file
+                cp "$file" "$data_file_path"
+                # Remove the temporary copy
+                rm "$file"
+                echo "Initialized data file: $data_file_path"
+            fi
+        fi
+    done
+    
+    # Now extract all non-CSV resources to the temp directory
+    cat resource_files.txt | while read file; do
+        if [[ $file != *.csv ]]; then
+            # For non-CSV files, extract directly to temp directory
+            jar xf "$JAR_PATH" "$file"
+            echo "Extracted resource: $file"
+        fi
+    done
+else
+    echo "Resource list not found. Creating basic structure..."
+    
+    # Create basic structure in both temp and data directories
+    mkdir -p "$TEMP_DIR/Implementation/Icons/{cat,dog,dragon}"
+    mkdir -p "$TEMP_DIR/Implementation/PlayerInventory"
+    mkdir -p "$DATA_DIR/Implementation"
+    
+    # Extract files from the JAR (excluding CSVs)
+    jar xf "$JAR_PATH" Implementation
+    
+    # Move any extracted CSV files to the data directory
+    find Implementation -name "*.csv" | while read csv_file; do
+        data_file_path="$DATA_DIR/$csv_file"
+        data_dir=$(dirname "$data_file_path")
+        mkdir -p "$data_dir"
+        
+        # If the data file doesn't exist yet, initialize it
+        if [ ! -f "$data_file_path" ]; then
+            cp "$csv_file" "$data_file_path"
+            echo "Initialized data file: $data_file_path"
+        fi
+        
+        # Remove the temp copy
+        rm "$csv_file"
+    done
+fi
+
+# Set permissions to ensure files are writable
+chmod -R 755 "$DATA_DIR"
+find "$DATA_DIR" -type f -name "*.csv" -exec chmod 644 {} \;
+
+# Run the application with data directory specified
+echo "Starting application..."
+cd "$TEMP_DIR"
+java -Dapp.data.dir="$DATA_DIR" -jar "$JAR_PATH"
+
+# Clean up when the application exits
+echo "Cleaning up..."
+cd "$SCRIPT_DIR"
+rm -rf "$TEMP_DIR"
+echo "Game completed. Data saved in: $DATA_DIR"
