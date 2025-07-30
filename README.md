@@ -79,7 +79,7 @@ If you encounter any issues:
 3. Check that you have sufficient disk space for saving game data
 4. Make sure you have the necessary permissions to run the application
 
-## For TAs
+## Extra Information
 
 - The project uses Maven for dependency management and building
 - All source code is located in the `Implementation` directory
